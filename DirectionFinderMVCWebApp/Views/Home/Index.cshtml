@@ -210,33 +210,6 @@
                 })
 
             }).then(response => {
-                $.get('/api/Locators', function (JsonData1) {
-                    calculator2.updateSettings({ degreeMode: true });
-                    calculator2.resize();
-                    $.each(JsonData1, function (index, item) {
-                        calculator2.setExpression({ id: `${index}`, latex: `y=\\tan(${item.angle})(x-${item.x})+${item.y}` });
-                    });
-
-                });
-            }).then(response => {
-                $.get('/api/Locators/TargetPoint', function (JsonData2) {
-                    calculator2.setExpression({
-                        id: 'pointA',
-                        latex: `A=(${JsonData2.x},${JsonData2.y})`,
-                        dragMode: Desmos.DragModes.NONE,
-                        pointStyle: Desmos.Styles.SOLID
-                    });
-                    res2.innerHTML = `x = ${JsonData2.x}; y = ${JsonData2.y}`;
-                    $.get('/api/Locators/TargetPointDivergence', function (JsonDataDiv2) {
-                        calculator2.setExpression({
-                            id: 'circle',
-                            latex: `(x-${JsonData2.x})^2 + (y-${JsonData2.y})^2 <= ${JsonDataDiv2}^2`,
-                        });
-                        divergence2.innerHTML = `${JsonDataDiv2}`
-                    });
-                });
-
-            }).then(response => {
                 var locX = document.getElementById('X').value;
                 var locY = document.getElementById('Y').value;
                 locationp2.innerHTML = `x = ${locX}; y = ${locY}`;
@@ -264,6 +237,33 @@
 
                         distance2.innerHTML = `${data2}`;
                     })
+            }).then(response => {
+                $.get('/api/Locators', function (JsonData1) {
+                    calculator2.updateSettings({ degreeMode: true });
+                    calculator2.resize();
+                    $.each(JsonData1, function (index, item) {
+                        calculator2.setExpression({ id: `${index}`, latex: `y=\\tan(${item.angle})(x-${item.x})+${item.y}` });
+                    });
+
+                });
+            }).then(response => {
+                $.get('/api/Locators/TargetPoint', function (JsonData2) {
+                    calculator2.setExpression({
+                        id: 'pointA',
+                        latex: `A=(${JsonData2.x},${JsonData2.y})`,
+                        dragMode: Desmos.DragModes.NONE,
+                        pointStyle: Desmos.Styles.SOLID
+                    });
+                    res2.innerHTML = `x = ${JsonData2.x}; y = ${JsonData2.y}`;
+                    $.get('/api/Locators/TargetPointDivergence', function (JsonDataDiv2) {
+                        calculator2.setExpression({
+                            id: 'circle',
+                            latex: `(x-${JsonData2.x})^2 + (y-${JsonData2.y})^2 <= ${JsonDataDiv2}^2`,
+                        });
+                        divergence2.innerHTML = `${JsonDataDiv2}`
+                    });
+                });
+
             })
 
         }

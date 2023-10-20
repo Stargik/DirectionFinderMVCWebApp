@@ -1,0 +1,274 @@
+﻿@model IEnumerable<List<double>>
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Direction Finder</h1>
+
+</div>
+<div>
+    <h5>Enter locators:</h5>
+    <form id="transmittersForm">
+        <p>
+            <textarea id="transmitterslist" rows="10"></textarea>
+            <input type="submit" value="Submit" class="submit" />
+        </p>
+    </form>
+</div>
+<div>
+    <h5>System of normal equations</h5>
+    <p>
+        @foreach (var item in Model)
+        {
+            <span>(@item[0])y + (@item[1])x = @item[2] </span><br />
+        }
+    </p>
+</div>
+
+<div>
+    <h5>Result:</h5>
+    <p id="result"></p>
+</div>
+<div>
+    <h5>Divergence:</h5>
+    <p id="divergence"></p>
+</div>
+<div>
+    <h5>Enter location:</h5>
+    <form id="factpoint">
+        <p>
+            X: <input type="text" name="X" id="X" value="" />
+            Y: <input type="text" name="Y" id="Y" value="" />
+            <input type="submit" value="Submit" class="submit" />
+        </p>
+    </form>
+</div>
+<div>
+    <h5>Location:</h5>
+    <p id="locationp"></p>
+</div>
+<div>
+    <h5>Distance:</h5>
+    <p id="distance"></p>
+</div>
+
+<div id="calculator" style="width: 600px; height: 400px;"></div>
+
+
+<div>
+    <h5>Enter eps:</h5>
+    <form id="epsForm">
+        <p>
+            Eps: <input type="text" name="eps" id="eps" value="" />
+            <input type="submit" value="Submit" class="submit" />
+        </p>
+    </form>
+</div>
+<div>
+    <h5>Eps:</h5>
+    <p id="epsp"></p>
+</div>
+<div>
+    <h5>Result:</h5>
+    <p id="result2"></p>
+</div>
+<div>
+    <h5>Divergence:</h5>
+    <p id="divergence2"></p>
+</div>
+<div>
+    <h5>Location:</h5>
+    <p id="locationp2"></p>
+</div>
+<div>
+    <h5>Distance:</h5>
+    <p id="distance2"></p>
+</div>
+<div id="calculator2" style="width: 600px; height: 400px;"></div>
+
+@section scripts{
+    <script src="https://www.desmos.com/api/v1.8/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+    <script>var elt = document.getElementById('calculator');
+        var elt2 = document.getElementById('calculator2');
+        var res = document.getElementById('result');
+        var res2 = document.getElementById('result2');
+        const factpointForm = document.getElementById("factpoint");
+        const transmittersForm = document.getElementById("transmittersForm");
+        const epsForm = document.getElementById("epsForm");
+        var divergence = document.getElementById('divergence');
+        var locationp = document.getElementById('locationp');
+        var divergence2 = document.getElementById('divergence2');
+        var locationp2 = document.getElementById('locationp2');
+        var epsp = document.getElementById('epsp');
+        var distance = document.getElementById('distance');
+        var distance2 = document.getElementById('distance2');
+        var calculator = Desmos.GraphingCalculator(elt);
+        
+        elt.style.width = '100%';
+        elt.style.height = '600px';
+        elt2.style.width = '100%';
+        elt2.style.height = '600px';
+        $.get('/api/Locators', function (JsonData) {
+            calculator.updateSettings({ degreeMode: true });
+            calculator.resize();
+            var lines = "";
+            $.each(JsonData, function (index, item) {
+                calculator.setExpression({ id: `${index}`, latex: `y=\\tan(${item.angle})(x-${item.x})+${item.y}` });
+                lines += `${item.x} ${item.y} ${item.angle}\n`;
+            });
+            lines = lines.substring(0, lines.length - 1);
+            var transmitterslist = document.getElementById('transmitterslist');
+            transmitterslist.value = lines;
+
+        });
+        $.get('/api/Locators/TargetPoint', function (JsonData) {
+            calculator.setExpression({
+                id: 'pointA',
+                latex: `A=(${JsonData.x},${JsonData.y})`,
+                dragMode: Desmos.DragModes.NONE,
+                pointStyle: Desmos.Styles.SOLID
+            });
+            res.innerHTML = `x = ${JsonData.x}; y = ${JsonData.y}`;
+            $.get('/api/Locators/TargetPointDivergence', function (JsonDataDiv) {
+                calculator.setExpression({
+                    id: 'circle',
+                    latex: `(x-${JsonData.x})^2 + (y-${JsonData.y})^2 <= ${JsonDataDiv}^2`,
+                });
+                divergence.innerHTML = `${JsonDataDiv}`
+            });
+        });
+
+        function factPointSubmit(event) {
+            event.preventDefault();
+            var locX = document.getElementById('X').value;
+            var locY = document.getElementById('Y').value;
+            locationp.innerHTML = `x = ${locX}; y = ${locY}`;
+            fetch('/api/Locators/SetFactPoint', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    X: locX,
+                    Y: locY,
+                })
+
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    calculator.setExpression({
+                        id: 'pointB',
+                        latex: `B=(${locX},${locY})`,
+                        dragMode: Desmos.DragModes.NONE,
+                        pointStyle: Desmos.Styles.SOLID
+                    });
+
+                    distance.innerHTML = `${data}`;
+                })
+        }
+
+        function transmittersFormSubmit(event) {
+            event.preventDefault();
+            var lines = $('textarea').val().split('\n');
+            var locators = [];
+            for (var i = 0; i < lines.length; i++) {
+                var arrayOfStrings = lines[i].split(' ');
+                var locator = { x: Number(arrayOfStrings[0]), y: Number(arrayOfStrings[1]), angle: Number(arrayOfStrings[2]) };
+                locators[i] = locator;
+            }
+            locators = JSON.stringify(locators);
+            console.log(locators);
+
+            $.ajax({
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                type: 'POST',
+                url: '/api/Locators/Setlocators',
+                data: locators
+            })
+            location.reload();
+
+        }
+
+        function epsSubmit(event) {
+            event.preventDefault();
+            elt2.innerHTML = "";
+            var calculator2 = Desmos.GraphingCalculator(elt2);
+            var eps = document.getElementById('eps').value;
+            epsp.innerHTML = `${eps}`;
+            fetch('/api/Locators/RemoveLocators', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    Eps: eps
+                })
+
+            }).then(response => {
+                $.get('/api/Locators', function (JsonData1) {
+                    calculator2.updateSettings({ degreeMode: true });
+                    calculator2.resize();
+                    $.each(JsonData1, function (index, item) {
+                        calculator2.setExpression({ id: `${index}`, latex: `y=\\tan(${item.angle})(x-${item.x})+${item.y}` });
+                    });
+
+                });
+            }).then(response => {
+                $.get('/api/Locators/TargetPoint', function (JsonData2) {
+                    calculator2.setExpression({
+                        id: 'pointA',
+                        latex: `A=(${JsonData2.x},${JsonData2.y})`,
+                        dragMode: Desmos.DragModes.NONE,
+                        pointStyle: Desmos.Styles.SOLID
+                    });
+                    res2.innerHTML = `x = ${JsonData2.x}; y = ${JsonData2.y}`;
+                    $.get('/api/Locators/TargetPointDivergence', function (JsonDataDiv2) {
+                        calculator2.setExpression({
+                            id: 'circle',
+                            latex: `(x-${JsonData2.x})^2 + (y-${JsonData2.y})^2 <= ${JsonDataDiv2}^2`,
+                        });
+                        divergence2.innerHTML = `${JsonDataDiv2}`
+                    });
+                });
+
+            }).then(response => {
+                var locX = document.getElementById('X').value;
+                var locY = document.getElementById('Y').value;
+                locationp2.innerHTML = `x = ${locX}; y = ${locY}`;
+                fetch('/api/Locators/SetFactPoint', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        X: locX,
+                        Y: locY,
+                    })
+
+                })
+                    .then(response => response.json())
+                    .then(data2 => {
+                        console.log(data2);
+                        calculator2.setExpression({
+                            id: 'pointB',
+                            latex: `B=(${locX},${locY})`,
+                            dragMode: Desmos.DragModes.NONE,
+                            pointStyle: Desmos.Styles.SOLID
+                        });
+
+                        distance2.innerHTML = `${data2}`;
+                    })
+            })
+
+        }
+
+        factpointForm.addEventListener("submit", factPointSubmit);
+        transmittersForm.addEventListener("submit", transmittersFormSubmit);
+        epsForm.addEventListener("submit", epsSubmit);</script>
+}
